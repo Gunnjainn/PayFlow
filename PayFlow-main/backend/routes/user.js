@@ -150,8 +150,16 @@ userRouter.put('/' , AuthorizedUser , async(req ,res , next)=>{
             message : 'Invalid Update Body'
         }).status(411);
     }
-    const UpdatedUser = await User.findByIdAndUpdate(req.userId ,req.body);
-    
+    // Never write req.body straight through: a password arriving here has to
+    // be hashed with the same cost factor signup uses, or sign-in can never
+    // match it again and the account is locked out with the plaintext stored.
+    const update = { ...req.body };
+    if (update.password) {
+        update.password = await bcrypt.hash(update.password, 10);
+    }
+
+    await User.findByIdAndUpdate(req.userId, update);
+
     return res.json({
         message : 'Updated Successfully'
     })
